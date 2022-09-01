@@ -94,8 +94,10 @@ if __name__ == "__main__":
                         excerpts = [excerptID]
                         if existingExcerpts: 
                             print ("Do we never get to here?")
-                            excs = existingExcerpts.append (excerptID)
-                            filesToSearchMap[fileName] = excs
+                            print(f"Existing excerpts: {existingExcerpts}")
+                            existingExcerpts.append("excerptID")
+                            # print(f"excs is: {existingExcerpts}")
+                            # filesToSearchMap[fileName] = existingExcerpts
                         else: 
                             filesToSearchMap[fileName] = excerpts
 
