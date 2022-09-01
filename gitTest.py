@@ -122,7 +122,7 @@ if __name__ == "__main__":
 
                         print(f"lineInCode: {lineIn}")
 
-                        line = lineIn.strip()
+                        line = lineIn.rstrip()
                     
                         match = re.search(reStartExcerpt, line)
                         if match:
@@ -198,9 +198,9 @@ if __name__ == "__main__":
                             excerptID = splitDetails[1].strip()
                             print(f"file is: {fileName}, excerpt id is : {excerptID}")
                             # copy over the contents of this excerpt into the accumulator
-                            hh = completedExcerptsMap.get(excerptID)
-                            if hh:
-                                for l in hh:
+                            excerptLines = completedExcerptsMap.get(excerptID)
+                            if excerptLines:
+                                for l in excerptLines:
                                     accumulatedOutput.append(l)
                             else:
                                 errorState = f"could not find excerpt contents for {excerptID}"
