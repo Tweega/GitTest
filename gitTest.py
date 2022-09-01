@@ -75,7 +75,7 @@ if __name__ == "__main__":
         errorState = None
                 
         # assume for the moment that the template file is in the same repo as code samples
-        templateFile = os.path.join(repo_local_path, "UserGuide.md")
+        templateFile = os.path.join(repo_local_path, "media_proto.html") # don't hard code tk
         with open(templateFile, 'r', encoding='UTF-8') as file:
             while (bool(lineIn := file.readline()) and (errorState is None)):
 
@@ -98,7 +98,6 @@ if __name__ == "__main__":
                         existingExcerpts = filesToSearchMap.get(codeFile)
                         excerpts = [excerptKey]
                         if existingExcerpts: 
-                            print ("Do we never get to here?")
                             print(f"Existing excerpts: {existingExcerpts}")
                             existingExcerpts.append(excerptKey)
                         else: 
@@ -147,6 +146,7 @@ if __name__ == "__main__":
                                     print(msg)
                                     errorState = msg
                                 else: 
+                                    print(f"adding excerptKey: {excerptKey}")
                                     openExcerptsMap[excerptKey] = []
 
                         else:
