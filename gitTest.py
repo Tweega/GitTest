@@ -77,10 +77,9 @@ if __name__ == "__main__":
         templateFile = os.path.join(repo_local_path, "UserGuide.md")
         with open(templateFile, 'r', encoding='UTF-8') as file:
             while (line := file.readline().rstrip()):
-                print(line)
+                print(f"line: {line}")
 
                 match = re.search(reTemplateExcerpt, line)
-                # If-statement after search() tests if it succeeded
                 if match:
                     excerptContents = match.groups()[0]
                     print('found', excerptContents) ## 'found word:cat'
@@ -89,24 +88,27 @@ if __name__ == "__main__":
                     if len(splitDetails) == 2:
                         fileName = splitDetails[0].strip()
                         excerptID = splitDetails[1].strip()
+                        print(f"file is: {fileName}, excerpt id is : {excerptID}")
 
                         existingExcerpts = filesToSearchMap.get(fileName)
                         excerpts = [excerptID]
                         if existingExcerpts: 
-                            excerpts = existingExcerpts.append (excerptID)
-                        
-                        filesToSearchMap[fileName] = excerpts
-                        
-                        for i in filesToSearchMap:
-                            print(filesToSearchMap.get(i))
+                            print ("Do we never get to here?")
+                            excs = existingExcerpts.append (excerptID)
+                            filesToSearchMap[fileName] = excs
+                        else: 
+                            filesToSearchMap[fileName] = excerpts
+
                     else:
                         err = f"Could not split contents of excerpt tag {excerptContents}"
                         errorLog.append(err)
 
 
+        print("Iterating map")
         
-        for j in filesToSearchMap:
-            print(filesToSearchMap[j])
+        for i in filesToSearchMap:
+            extracts = filesToSearchMap.get(i)
+            print(f"file: {i}, excerpts: {extracts}")
 
         print ("END")
         # excerptsFilePath = os.path.join(repo_local_path, "excerpts.csv")
