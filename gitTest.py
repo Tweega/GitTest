@@ -1,4 +1,5 @@
 import os
+import re
 from git import Repo
 COMMITS_TO_PRINT = 5
 
@@ -23,7 +24,25 @@ def print_repository(repo):
 if __name__ == "__main__":
     repo_local_path = os.getenv('NORSK_SAMPLE_CODE_PATH')
     repo_git_url = os.getenv('NORSK_SAMPLE_CODE_GIT_URL')
+    
+    # keep track of 
+        # list of files to be examined
+        # accumulated output - a copy of the file with code excerpts interpolated in
+        # map of the completed excerpts keyed on file name and excerptid - value being a list of content lines
+        # map of the open excerpts keyed on file name and excerptid - - value being a list of content lines
+
+    filesToBeExamined = []
+    accumulatedOutput = []
+    completedExcerptsMap = {}
+    openExcerptsMap = {}
+
+    
+    filesToSearchMap = {}
+    errorLog = []    
+    
     ok = True
+
+    
 
     if repo_local_path and repo_git_url :
 
@@ -52,8 +71,50 @@ if __name__ == "__main__":
         ok = False
 
     if ok :
-        excerptsFilePath = os.path.join(repo_local_path, "excerpts.csv")
-        with open(excerptsFilePath, 'r', encoding='UTF-8') as file:
+        # open the template file and get a list of files that excerpts need to be retrieved from 
+        reTemplateExcerpt = r'^\[excerpt](.+)\[\/excerpt]'
+        # assume for the moment that the template file is in the same repo as code samples
+        templateFile = os.path.join(repo_local_path, "UserGuide.md")
+        with open(templateFile, 'r', encoding='UTF-8') as file:
             while (line := file.readline().rstrip()):
                 print(line)
+
+                match = re.search(reTemplateExcerpt, line)
+                # If-statement after search() tests if it succeeded
+                if match:
+                    excerptContents = match.groups()[0]
+                    print('found', excerptContents) ## 'found word:cat'
+                    # add this file to the map, if it does not already exist
+                    splitDetails = excerptContents.split(",")
+                    if len(splitDetails) == 2:
+                        fileName = splitDetails[0].strip()
+                        excerptID = splitDetails[1].strip()
+
+                        existingExcerpts = filesToSearchMap.get(fileName)
+                        excerpts = [excerptID]
+                        if existingExcerpts: 
+                            excerpts = existingExcerpts.append (excerptID)
+                        
+                        filesToSearchMap[fileName] = excerpts
+                        
+                        for i in filesToSearchMap:
+                            print(filesToSearchMap.get(i))
+                    else:
+                        err = f"Could not split contents of excerpt tag {excerptContents}"
+                        errorLog.append(err)
+
+
+        
+        for j in filesToSearchMap:
+            print(filesToSearchMap[j])
+
+        print ("END")
+        # excerptsFilePath = os.path.join(repo_local_path, "excerpts.csv")
+        # with open(excerptsFilePath, 'r', encoding='UTF-8') as file:
+        #     while (line := file.readline().rstrip()):
+        #         print(line)
+
+                # start excerpt ^#.+?\[excerpt\s*(.+)\]
+                # end excerpt  ^#.+?\[\/excerpt\s*(.+)\]
+                  
         
