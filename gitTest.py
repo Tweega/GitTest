@@ -89,18 +89,20 @@ if __name__ == "__main__":
                     # add this file to the map, if it does not already exist
                     splitDetails = excerptContents.split(",")
                     if len(splitDetails) == 2:
-                        fileName = splitDetails[0].strip()
+                        codeFile = splitDetails[0].strip()
                         excerptID = splitDetails[1].strip()
-                        print(f"file is: {fileName}, excerpt id is : {excerptID}")
+                        excerptKey = ":".join([codeFile, excerptID])
+                            
+                        print(f"excerpt key is : {excerptKey}")
 
-                        existingExcerpts = filesToSearchMap.get(fileName)
-                        excerpts = [excerptID]
+                        existingExcerpts = filesToSearchMap.get(codeFile)
+                        excerpts = [excerptKey]
                         if existingExcerpts: 
                             print ("Do we never get to here?")
                             print(f"Existing excerpts: {existingExcerpts}")
-                            existingExcerpts.append(excerptID)
+                            existingExcerpts.append(excerptKey)
                         else: 
-                            filesToSearchMap[fileName] = excerpts
+                            filesToSearchMap[codeFile] = excerpts
 
                     else:
                         errorState = f"Could not split contents of excerpt tag {excerptContents}"
@@ -128,43 +130,47 @@ if __name__ == "__main__":
                         if match:
                             excerptContents = match.groups()[0]
                             excerptID = excerptContents.strip()
+                            excerptKey = ":".join([codeFile, excerptID])
                             
                             print(f"Start excerpt for {excerptContents}")
                             # add excerpt id to openExcerptsMap
-                            openExcerpt = openExcerptsMap.get(excerptID)
+                            openExcerpt = openExcerptsMap.get(excerptKey)
                             if openExcerpt: 
-                                msg = (f"openExcerpt: {excerptID} already exists")
+                                msg = (f"openExcerpt: {excerptKey} already exists")
                                 print(msg)
                                 errorState = msg
                             else: 
                                 # check that this excerptID is not in the closed map
-                                closedExcerpt = completedExcerptsMap.get(excerptID)
+                                closedExcerpt = completedExcerptsMap.get(excerptKey)
                                 if closedExcerpt: 
-                                    msg = (f"closedExcerpt: {excerptID} already exists in completed map")
+                                    msg = (f"closedExcerpt: {excerptKey} already exists in completed map")
                                     print(msg)
                                     errorState = msg
                                 else: 
-                                    openExcerptsMap[excerptID] = []
+                                    openExcerptsMap[excerptKey] = []
 
                         else:
                             match = re.search(reEndExcerpt, line)
                             if match:
                                 excerptContents = match.groups()[0]
-                                print(f"End excerpt for {excerptContents}")
-                                openExcerptLines = openExcerptsMap.get(excerptID)
+                                excerptID = excerptContents.strip()                                
+                                excerptKey = ":".join([codeFile, excerptID])
+                            
+                                print(f"End excerpt for {excerptKey}")
+                                openExcerptLines = openExcerptsMap.get(excerptKey)
                                 if openExcerptLines: 
-                                    completedExcerptsMap[excerptID] = openExcerptLines
-                                    del openExcerptsMap[excerptID]
+                                    completedExcerptsMap[excerptKey] = openExcerptLines
+                                    del openExcerptsMap[excerptKey]
                                 else:
-                                    msg = (f"openExcerpt: {excerptID} could not be found - probably never opened in the first place)")
+                                    msg = (f"openExcerpt: {excerptKey} could not be found - probably never opened in the first place)")
                                     print(msg)
                                     errorState = msg 
 
                             else:
                                 print(f"standard content {excerptContents}")
                                 # add this line to any open excerpts
-                                for excerptID in openExcerptsMap:
-                                    openExcerptsMap[excerptID].append (line)
+                                for exKey in openExcerptsMap:
+                                    openExcerptsMap[exKey].append (line)
 
         if errorState is None: 
 
@@ -194,16 +200,18 @@ if __name__ == "__main__":
                         # add this file to the map, if it does not already exist
                         splitDetails = excerptContents.split(",")
                         if len(splitDetails) == 2:
-                            fileName = splitDetails[0].strip()
+                            codeFile = splitDetails[0].strip()
                             excerptID = splitDetails[1].strip()
-                            print(f"file is: {fileName}, excerpt id is : {excerptID}")
+                            excerptKey = ":".join([codeFile, excerptID])
+                            
+                            print(f"excerpt key is : {excerptKey}")
                             # copy over the contents of this excerpt into the accumulator
-                            excerptLines = completedExcerptsMap.get(excerptID)
+                            excerptLines = completedExcerptsMap.get(excerptKey)
                             if excerptLines:
                                 for l in excerptLines:
                                     accumulatedOutput.append(l)
                             else:
-                                errorState = f"could not find excerpt contents for {excerptID}"
+                                errorState = f"could not find excerpt contents for {excerptKey}"
 
 
                             
