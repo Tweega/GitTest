@@ -5,6 +5,7 @@ import re
 import shutil
 import tempfile
 from git import Repo
+from os.path import exists
 
 PROGRAM = "ProgamName tbd"
 VERSION = '0.1'
@@ -28,11 +29,14 @@ def print_repository(repo):
         print('Remote named "{}" with URL "{}"'.format(remote, remote.url))
     print('Last commit for repo is {}.'.format(str(repo.head.commit.hexsha)))
 
-cachedFiles = {}
-errorState = None
+        
+        
+def runInterpolation(args):
 
-if __name__ == "__main__":
-    cachedFiles.clear()
+    cachedFiles = {}
+    errorState = None
+
+    # cachedFiles.clear()
     reTemplateExcerpt = r'.*?\[excerpt](.+)\[\/excerpt]'
     reStartExcerpt  =  r'.*?\[excerpt\s*(.+)\]'
     reEndExcerpt = r'.*?\[\/excerpt\s*(.+)\]'
@@ -46,19 +50,11 @@ if __name__ == "__main__":
     # errorState = "Debugging for now"
 
     
-    print (f'ARGV: {sys.argv[1:]}')
+    print (f'ARGV: {args}')
 
-    # the arguments that I want are 
-        # sample code path
-        # git repo (optional?)
-        # training manual file name (template)
-        # comment string
-        # verbose?
-        # error log path?
-
-    options, remainder = getopt.getopt(sys.argv[1:], 'p:g:b:t:o:vh', ['codepath=', 
+    options, remainder = getopt.getopt(args, 'c:g:pt:o:svhq', ['codepath=', 
                                                         'gitrepo=',
-                                                        'gitbranch',
+                                                        'gitpull',
                                                         'template=',
                                                         'outputpath=',
                                                         'strip',
@@ -67,12 +63,13 @@ if __name__ == "__main__":
                                                         'verbose',
                                                         ])
 
-    repoPath = os.getenv('NORSK_SAMPLE_CODE_PATH')
-    outputPath = os.getenv('NORSK_SAMPLE_OUTPUT_PATH')
-    repoGitUrl = os.getenv('NORSK_SAMPLE_CODE_GIT_URL')
-    templateFile = "media_proto.html" #DEBUG ONLY tk
-    verbose = True
+    repoPath = "" #os.getenv('NORSK_SAMPLE_CODE_PATH')
+    outputPath = "" #os.getenv('NORSK_SAMPLE_OUTPUT_PATH')
+    repoGitUrl = "" #os.getenv('NORSK_SAMPLE_CODE_GIT_URL')
+    templateFile = "" #DEBUG ONLY tk media_proto.html
+    verbose = False
     strip = False
+    gitPull = False
     useTempDir = False
     repoGitBranch = "main"
 
@@ -126,11 +123,12 @@ if __name__ == "__main__":
             repoPath = arg            
         elif opt in ('-g', '--gitrepo'):
             repoGitUrl = arg
+        elif opt in ('-p', '--gitpull'):
+            gitPull = True
         elif opt in ('-b', '--gitbranch'):
             repoGitBranch = arg
         elif opt in ('-t', '--template'):
-            templateFile = arg
-            verbose = True
+            templateFile = arg            
         elif opt in ('-o', '--outputpath'):
             outputPath = arg
         elif opt in ('-s', '--strip'):
@@ -140,17 +138,17 @@ if __name__ == "__main__":
         elif opt in ('-h', '--help'):
             usageLines = ["usage", "programName.py",
             "options: ", 
-            "-p, --codepath : the local path to code repository. (Required unless --gitrepo provided).  Alternatively set env variable NORSK_SAMPLE_CODE_PATH",
-            "-g, --gitrepo: the url to git repo to extract code examples from. (optional).  Alternatively set env variable NORSK_SAMPLE_CODE_GIT_URL",
-            "-b, --gitbranch: defaults to main, and currently only used when no codepath supplied",
-            "-t, --template: the file into which excerpts should be inserted (required)",
+            "-p, --codepath : the local path to code repository. (one, and only one, required from --gitrepo or --codepath).  Alternatively set env variable NORSK_SAMPLE_CODE_PATH",
+            "-g, --gitrepo: the url to git repo to extract code examples from. (one, and only one, required from --gitrepo or --codepath).  --templateFile in this case must be complete file path.  Alternatively set env variable NORSK_SAMPLE_CODE_GIT_URL",
+            "-p, --gitpull: only used with --codepath, when that directory is a git repo",
+            "-t, --template: the file into which excerpts should be inserted.  This can be complete path, otherwise assumed to be in --repopath (required)",
             "-o, --outputpath: directory to save output files into(required). Alternatively set env variable NORSK_SAMPLE_OUTPUT_PATH",
             "-s, --strip: Strips files listed in template file of [excerpt] markup and copies to --outputpath directory.",
             "-v, --version: prints version of this program (the program does not execute when this option is provided)",
             "-h, --help: displays this usage text (the program does not execute when this option is provided)"
             ]
             errorState = "\n".join(usageLines)            
-        elif opt in ('--verbose'):
+        elif opt in ('-q', '--verbose'):
             verbose = True
     
     if repoPath and not(os.path.isdir(repoPath)):
@@ -164,10 +162,12 @@ if __name__ == "__main__":
         elif not(os.path.isdir(outputPath)):
             errorState = f"Unable to access output path: {outputPath}"
 
-    if not repoPath:
-        if not repoGitUrl:
-            errorState = "One of --gitrepo or --repopath must be provided"
-        else:
+    if repoPath:       
+        if repoGitUrl:
+            errorState = "Only ONE of --gitrepo or --repopath should be provided"
+
+    else:
+        if repoGitUrl:
             # Create temporary dir
             repoPath = tempfile.mkdtemp()
             useTempDir = True
@@ -178,7 +178,25 @@ if __name__ == "__main__":
             # # Remove temporary dir
             # shutil.rmtree(t)
         
-    
+        else :    
+            errorState = "One of --gitrepo or --repopath must be provided"
+        
+    if not templateFile:
+        errorState = f"--template must be supplied"
+    else:
+        if useTempDir:
+            # templateFile must be a complete path as we do not have repoPath
+            templateFilePath = templateFile
+        else :
+            if "/" in templateFile:
+                templateFilePath = templateFile
+            else:
+                templateFilePath = os.path.join(repoPath, templateFile)
+        
+        if not exists(templateFilePath):
+            errorState = f"template file does not exist: {templateFilePath}"
+
+        
     vPrint (f"repoPath: {repoPath}")
     vPrint (f"repoGitUrl: {repoGitUrl}")
     vPrint (f"repoGitBranch: {repoGitBranch}")
@@ -187,42 +205,32 @@ if __name__ == "__main__":
     vPrint (f"verbose: {verbose}")
 
     if errorState is None : 
-        if repoGitUrl :
+        if gitPull:
             try:
-                action = "clone"
+                repo = Repo(repoPath) 
+                repo.remotes.origin.pull() 
+                # checkout specific branch?     
+                vPrint ("Pulling from git")
+                
+            except Exception as e:
+                msg = str(e)
+                errorState = f"Error occured when pulling from git repo {repoPath}. Error: {msg}"
+
+        elif repoGitUrl:
+            try:
                 if useTempDir:   # we actually need to check if git initialised yet tk
+                    vPrint("cloning from git")
                     repo = Repo.clone_from(repoGitUrl, repoPath, branch=repoGitBranch, depth=1)
-                else:
-                    action = "pull" 
-                    repo = Repo(repoPath) 
-                    repo.remotes.origin.pull() 
-                    # checkout specific branch?     
                     
             except Exception as e:
                 msg = str(e)
-                errorState = f"Error occured when interacting with git.  Action: {action}.  Error: {msg}"
-                                    
-            # repo = Repo(repoPath)
-            # check that the repository loaded correctly
-            if errorState is None:
-                if not repo.bare:
-                    vPrint('Repo at {} successfully loaded.'.format(repoPath))
-                    print_repository(repo)
-                    # create list of commits then print some of them to stdout
-                    commits = list(repo.iter_commits(repoGitBranch))[:COMMITS_TO_PRINT]
-                    for commit in commits:
-                        print_commit(commit)
-                        pass
-                else:
-                    errMsg = 'Could not load repository at {} :('.format(repoPath)
-                    errorState = errMsg
-        
+                errorState = f"Error occured when cloning from git repo {repoGitUrl}.  Error: {msg}"
+
 
     if errorState is None :
         # open the template file and get a list of files that excerpts need to be retrieved from 
                 
         # assume for the moment that the template file is in the same repo as code samples
-        templateFilePath = os.path.join(repoPath, templateFile)
         fileLines, errorState = getFileLines(templateFilePath, True)
         numLines = len(fileLines)
         lineIndex = 0
@@ -230,7 +238,7 @@ if __name__ == "__main__":
             line = fileLines[lineIndex]
             lineIndex += 1
             
-            vPrint(f"lineIn: {line}")
+            # vPrint(f"lineIn: {line}")
 
             match = re.search(reTemplateExcerpt, line)
             if match:
@@ -274,7 +282,7 @@ if __name__ == "__main__":
                 while ((lineIndex < numLines) and (errorState is None)):
                     line = fileLines[lineIndex]
                     lineIndex += 1
-                    vPrint(f"lineInCode: {line}")
+                    # vPrint(f"lineInCode: {line}")
                 
                     match = re.search(reStartExcerpt, line)
                     if match:
@@ -342,7 +350,7 @@ if __name__ == "__main__":
                 line = fileLines[lineIndex]
                 lineIndex += 1
             
-                vPrint(f"lineIn: {line}")
+                # vPrint(f"lineIn: {line}")
 
                 match = re.search(reTemplateExcerpt, line)
                 if match:
@@ -390,9 +398,18 @@ if __name__ == "__main__":
                             errorState = saveTextFile(strippedText, outPath)
 
 
+    if useTempDir:
+        # Remove temporary dir used for repository clone
+        shutil.rmtree(repoPath)
+
     if errorState is None:
         print ("END")
 
     else:
         print(f"There was a problem:\n{errorState}")
+    
+    return errorState
         
+
+if __name__ == "__main__":
+    runInterpolation(sys.argv[1:])

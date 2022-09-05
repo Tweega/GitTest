@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args":["arg1", "arg2"],
+            "args":["--outputpath", "~/work/python/some_repo/output/debug"],
             "justMyCode": true
         }
     ]
