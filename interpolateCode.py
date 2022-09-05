@@ -1,3 +1,4 @@
+from distutils import errors
 import getopt
 import sys
 import os
@@ -48,21 +49,6 @@ def runInterpolation(args):
     openExcerptsMap = {}
     filesToSearchMap = {}
     # errorState = "Debugging for now"
-
-    
-    print (f'ARGV: {args}')
-
-    options, remainder = getopt.getopt(args, 'c:g:pt:o:svhq', ['codepath=', 
-                                                        'gitrepo=',
-                                                        'gitpull',
-                                                        'template=',
-                                                        'outputpath=',
-                                                        'strip',
-                                                        'version',
-                                                        'help',
-                                                        'verbose',
-                                                        ])
-
     repoPath = "" #os.getenv('NORSK_SAMPLE_CODE_PATH')
     outputPath = "" #os.getenv('NORSK_SAMPLE_OUTPUT_PATH')
     repoGitUrl = "" #os.getenv('NORSK_SAMPLE_CODE_GIT_URL')
@@ -118,85 +104,58 @@ def runInterpolation(args):
         if verbose:
             print(f"{str}\n")
 
-    for opt, arg in options:
-        if opt in ('-p', '--codepath'):
-            repoPath = arg            
-        elif opt in ('-g', '--gitrepo'):
-            repoGitUrl = arg
-        elif opt in ('-p', '--gitpull'):
-            gitPull = True
-        elif opt in ('-b', '--gitbranch'):
-            repoGitBranch = arg
-        elif opt in ('-t', '--template'):
-            templateFile = arg            
-        elif opt in ('-o', '--outputpath'):
-            outputPath = arg
-        elif opt in ('-s', '--strip'):
-            strip = True
-        elif opt in ('-v', '--version'):
-            errorState = f"Version: {PROGRAM}: {VERSION}"
-        elif opt in ('-h', '--help'):
-            usageLines = ["usage", "programName.py",
-            "options: ", 
-            "-p, --codepath : the local path to code repository. (one, and only one, required from --gitrepo or --codepath).  Alternatively set env variable NORSK_SAMPLE_CODE_PATH",
-            "-g, --gitrepo: the url to git repo to extract code examples from. (one, and only one, required from --gitrepo or --codepath).  --templateFile in this case must be complete file path.  Alternatively set env variable NORSK_SAMPLE_CODE_GIT_URL",
-            "-p, --gitpull: only used with --codepath, when that directory is a git repo",
-            "-t, --template: the file into which excerpts should be inserted.  This can be complete path, otherwise assumed to be in --repopath (required)",
-            "-o, --outputpath: directory to save output files into(required). Alternatively set env variable NORSK_SAMPLE_OUTPUT_PATH",
-            "-s, --strip: Strips files listed in template file of [excerpt] markup and copies to --outputpath directory.",
-            "-v, --version: prints version of this program (the program does not execute when this option is provided)",
-            "-h, --help: displays this usage text (the program does not execute when this option is provided)"
-            ]
-            errorState = "\n".join(usageLines)            
-        elif opt in ('-q', '--verbose'):
-            verbose = True
+
+    vPrint (f'ARGV: {args}')
+
+    try: 
+        options, remainder = getopt.getopt(args, 'c:g:pt:o:svhq', ['codepath=', 
+                                                            'gitrepo=',
+                                                            'gitpull',
+                                                            'template=',
+                                                            'outputpath=',
+                                                            'strip',
+                                                            'version',
+                                                            'help',
+                                                            'verbose',
+                                                            ])
+        for opt, arg in options:
+            if opt in ('-c', '--codepath'):
+                repoPath = arg            
+            elif opt in ('-g', '--gitrepo'):
+                repoGitUrl = arg
+            elif opt in ('-p', '--gitpull'):
+                gitPull = True
+            elif opt in ('-b', '--gitbranch'):
+                repoGitBranch = arg
+            elif opt in ('-t', '--template'):
+                templateFile = arg            
+            elif opt in ('-o', '--outputpath'):
+                outputPath = arg
+            elif opt in ('-s', '--strip'):
+                strip = True
+            elif opt in ('-v', '--version'):
+                errorState = f"Version: {PROGRAM}: {VERSION}"
+            elif opt in ('-h', '--help'):
+                usageLines = ["usage", "programName.py",
+                "options: ", 
+                "-p, --codepath : the local path to code repository. (one, and only one, required from --gitrepo or --codepath).  Alternatively set env variable NORSK_SAMPLE_CODE_PATH",
+                "-g, --gitrepo: the url to git repo to extract code examples from. (one, and only one, required from --gitrepo or --codepath).  --templateFile in this case must be complete file path.  Alternatively set env variable NORSK_SAMPLE_CODE_GIT_URL",
+                "-p, --gitpull: only used with --codepath, when that directory is a git repo",
+                "-t, --template: the file into which excerpts should be inserted.  This can be complete path, otherwise assumed to be in --repopath (required)",
+                "-o, --outputpath: directory to save output files into(required). Alternatively set env variable NORSK_SAMPLE_OUTPUT_PATH",
+                "-s, --strip: Strips files listed in template file of [excerpt] markup and copies to --outputpath directory.",
+                "-v, --version: prints version of this program (the program does not execute when this option is provided)",
+                "-h, --help: displays this usage text (the program does not execute when this option is provided)"
+                ]
+                errorState = "\n".join(usageLines)            
+            elif opt in ('-q', '--verbose'):
+                verbose = True
     
-    if repoPath and not(os.path.isdir(repoPath)):
-        errorState = f"Unable to access code path: {repoPath}"
-
-    if not outputPath:
-        errorState = "--outputpath must be specified"
-    else:
-        if outputPath == repoPath:
-            errorState = "Repo path and output path should not be the same otherwise files may be overwritten"
-        elif not(os.path.isdir(outputPath)):
-            errorState = f"Unable to access output path: {outputPath}"
-
-    if repoPath:       
-        if repoGitUrl:
-            errorState = "Only ONE of --gitrepo or --repopath should be provided"
-
-    else:
-        if repoGitUrl:
-            # Create temporary dir
-            repoPath = tempfile.mkdtemp()
-            useTempDir = True
-            # # Clone into temporary dir
-            # git.Repo.clone_from('stack@127.0.1.7:/home2/git/stack.git', t, branch='master', depth=1)
-            # # Copy desired file from temporary dir
-            # shutil.move(os.path.join(t, 'setup.py'), '.')
-            # # Remove temporary dir
-            # shutil.rmtree(t)
-        
-        else :    
-            errorState = "One of --gitrepo or --repopath must be provided"
-        
-    if not templateFile:
-        errorState = f"--template must be supplied"
-    else:
-        if useTempDir:
-            # templateFile must be a complete path as we do not have repoPath
-            templateFilePath = templateFile
-        else :
-            if "/" in templateFile:
-                templateFilePath = templateFile
-            else:
-                templateFilePath = os.path.join(repoPath, templateFile)
-        
-        if not exists(templateFilePath):
-            errorState = f"template file does not exist: {templateFilePath}"
-
-        
+    except Exception as e:
+        errorState = f"Not happy with the options passed in:\n {e}\n"
+    
+    
+    
     vPrint (f"repoPath: {repoPath}")
     vPrint (f"repoGitUrl: {repoGitUrl}")
     vPrint (f"repoGitBranch: {repoGitBranch}")
@@ -204,6 +163,47 @@ def runInterpolation(args):
     vPrint (f"outputPath: {outputPath}")
     vPrint (f"verbose: {verbose}")
 
+    if errorState is None:    
+        if repoPath and not(os.path.isdir(repoPath)):
+            errorState = f"Unable to access code path: {repoPath}"
+
+        if not outputPath:
+            errorState = "--outputpath must be specified"
+        else:
+            if outputPath == repoPath:
+                errorState = "Repo path and output path should not be the same otherwise files may be overwritten"
+            elif not(os.path.isdir(outputPath)):
+                errorState = f"Unable to access output path: {outputPath}"
+
+        if repoPath:       
+            if repoGitUrl:
+                errorState = "Only ONE of --gitrepo or --repopath should be provided"
+
+        else:
+            if repoGitUrl:
+                # Create temporary dir
+                repoPath = tempfile.mkdtemp()
+                useTempDir = True
+            
+            else :    
+                errorState = "One of --gitrepo or --repopath must be provided"
+
+    if errorState is None:    
+        if not templateFile:
+            errorState = f"--template must be supplied"
+        elif "/" in templateFile:
+            templateFilePath = templateFile
+            revStr = templateFile[::-1]
+            x = revStr.find("/")
+            s = revStr[0:x]
+            templateFile = s[::-1]            
+        else:
+            templateFilePath = os.path.join(repoPath, templateFile)
+        
+        
+    if errorState is None and not exists(templateFilePath):
+        errorState = f"template file does not exist: {templateFilePath}"
+            
     if errorState is None : 
         if gitPull:
             try:
@@ -323,7 +323,7 @@ def runInterpolation(args):
                                 errorState = msg 
 
                         else:
-                            vPrint(f"standard content {excerptContents}")
+                            # vPrint(f"standard content {excerptContents}")
                             # add this line to any open excerpts
                             for exKey in openExcerptsMap:
                                 openExcerptsMap[exKey].append (line)
@@ -387,6 +387,7 @@ def runInterpolation(args):
                 if strip: 
                     excerptFilter = lambda l: not(bool(re.search(reExcerpt, l)))
                     for codeFile in filesToSearchMap:
+                        vPrint(f"stripping {codeFile}")
                         if errorState is None:
                             codeFilePath = os.path.join(repoPath, codeFile)
                     
@@ -394,7 +395,7 @@ def runInterpolation(args):
                             strippedLines = filter(excerptFilter, codeLines)
                             strippedText = "\n".join(strippedLines)
                             outPath = os.path.join(outputPath, codeFile)
-
+                            vPrint(f"Saving stripped file to {outPath}")
                             errorState = saveTextFile(strippedText, outPath)
 
 
