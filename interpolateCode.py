@@ -403,7 +403,7 @@ def runInterpolation(args):
         shutil.rmtree(repoPath)
 
     if errorState is None:
-        print ("END")
+        print ("Ok")
 
     else:
         print(errorState)
