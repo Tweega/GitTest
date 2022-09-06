@@ -406,7 +406,7 @@ def runInterpolation(args):
         print ("END")
 
     else:
-        print(f"There was a problem:\n{errorState}")
+        print(errorState)
     
     return errorState
         
