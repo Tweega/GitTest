@@ -8,7 +8,7 @@ import tempfile
 from git import Repo
 from os.path import exists
 
-PROGRAM = "ProgamName tbd"
+PROGRAM = "InterpolateCode.py"
 VERSION = '0.1'
 COMMITS_TO_PRINT = 5
 
@@ -392,7 +392,7 @@ def runInterpolation(args):
                             codeFilePath = os.path.join(repoPath, codeFile)
                     
                             codeLines, errorState = getFileLines(codeFilePath)
-                            strippedLines = filter(excerptFilter, codeLines)
+                            strippedLines = list(filter(excerptFilter, codeLines))
                             strippedText = "\n".join(strippedLines)
                             outPath = os.path.join(outputPath, codeFile)
                             vPrint(f"Saving stripped file to {outPath}")

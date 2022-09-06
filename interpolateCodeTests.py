@@ -1,6 +1,28 @@
 import os
 import interpolateCode
 import shutil
+import re
+from os.path import exists
+
+def getFileLines(fileName):
+    errorMsg = None
+    try:
+        fileLines = []
+        if repoPath != "":
+            filePath = os.path.join(repoPath, fileName)
+            with open(filePath, 'r', encoding='UTF-8') as file:
+                while (bool(lineIn := file.readline())):
+                    line = lineIn.rstrip()
+                    fileLines.append(line)
+        else:
+            errorMsg = f"unable to load file: {fileName}"
+        return fileLines, errorMsg
+    except Exception as e:
+            msg = str(e)
+            errorMsg = f"Error occured in getFileLines: {msg}"
+    return [], errorMsg
+        
+
 
 def deleteFolder(folder):
     errMsg = None
@@ -19,7 +41,7 @@ if __name__ == "__main__":
     ## these are not unit tests as the interpolator relies mainly on side effects
 
     RUN_ALL = True
-    SHOW_ALL_RESULTS = True
+    ONLY_SHOW_FAILURES = False
     repoPath = r"/home/christopher/work/python/some_repo"
     nonGitRepoPath = r"/home/christopher/work/python/not_a_git_repo"
 
@@ -41,8 +63,10 @@ if __name__ == "__main__":
     notAGitRepoPath = os.path.join(nonGitRepoPath, "output", "Test1")
     notAGitRepoPath2 = os.path.join(nonGitRepoPath, "output", "Test2")
     testOutPathNotExist = os.path.join(repoPath, "output", "DoesNotExist")
-    gitURL = r"git@github.com:Tweega/CodeExamples.git"
+    gitURLPublic = r"git@github.com:Tweega/CodeExamples.git"
+    gitURLPrivate = r"git@github.com:Tweega/CodeInterpolationTest.git"
     gitURLDoesNotExist = r"git@github.com:Tweega/DoesNotExist.git"
+    
     templateFile = "media_proto.html"
     tFile = os.path.join(repoPath,  templateFile)
 
@@ -61,6 +85,29 @@ if __name__ == "__main__":
 
     if errorState is None:
         print ("Tests for interpolateCode.py")
+        
+        reason = "Version: InterpolateCode.py: 0.1"
+        if RUN_ALL or False:
+
+            res = interpolateCode.runInterpolation(["--version"])
+            if res == reason:
+                successes.append(f"{reason} PASSED")
+            else :
+                failures.append(f"{reason} FAILED.  Got: {res}")
+
+
+        reason = "--Help returns usage"
+        if RUN_ALL or False:
+
+            res = interpolateCode.runInterpolation(["--help"])
+            err = "usage"
+            strLen = len(err)
+            if res is not None and res[0:strLen] == err:
+                successes.append(f"{reason} PASSED")
+            else :
+                failures.append(f"{reason} FAILED.  Got: {res[0:strLen]}")
+
+        
         reason = "One of --gitrepo or --repopath must be provided"
         if RUN_ALL or False:
 
@@ -124,31 +171,34 @@ if __name__ == "__main__":
         
         reason = "Only ONE of --gitrepo or --repopath should be provided"
         if RUN_ALL or False:
-            res = interpolateCode.runInterpolation(["--codepath", repoPath, "--gitrepo", gitURL, "--outputpath", testOutPath1, "--template", templateFile])
+            res = interpolateCode.runInterpolation(["--codepath", repoPath, "--gitrepo", gitURLPublic, "--outputpath", testOutPath1, "--template", templateFile])
             if res is not None and res == reason:
-            
-                # // we should also check that files arrive in the target directory
-                successes.append(f"{reason} PASSED")
-            else:
-                failures.append(f"{reason} FAILED.  Got: {res}")
-
-
-        reason = "Test1 directory gets processed template file when repoPath is NOT a git repo)"
-        if RUN_ALL or False:
-            res = interpolateCode.runInterpolation(["--codepath", nonGitRepoPath, "--outputpath", notAGitRepoPath, "--template", templateFile])
-            if res is None:
-                # // we should also check that files arrive in the target directory
                 successes.append(f"{reason} PASSED")
             else :
                 failures.append(f"{reason} FAILED.  Got: {res}")
 
+        reason = "template gets processed when repoPath is NOT a git repo)"
+        if RUN_ALL or False:
+            res = interpolateCode.runInterpolation(["--codepath", nonGitRepoPath, "--outputpath", notAGitRepoPath, "--template", templateFile])
+            if res is None:
+                filePath = os.path.join(notAGitRepoPath, templateFile)
+                if exists(filePath):
+                    successes.append(f"{reason} PASSED")
+                else:
+                    failures.append(f"{reason} FAILED. Template file not found in {filePath}")
+            else :
+                failures.append(f"{reason} FAILED.  Got: {res}")
 
-        reason = "Test1 directory gets processed template file (and local repo is NOT refreshed from git)"
+
+        reason = "template file is processed to target (and local repo is NOT refreshed from git)"
         if RUN_ALL or False:
             res = interpolateCode.runInterpolation(["--codepath", repoPath, "--outputpath", testOutPath1, "--template", templateFile, "--verbose"])
             if res is None:
-                # // we should also check that files arrive in the target directory
-                successes.append(f"{reason} PASSED")
+                filePath = os.path.join(testOutPath1, templateFile)
+                if exists(filePath):
+                    successes.append(f"{reason} PASSED")
+                else:
+                    failures.append(f"{reason} FAILED. Template file not found in {filePath}")
             else :
                 failures.append(f"{reason} FAILED.  Got: {res}")
 
@@ -156,8 +206,11 @@ if __name__ == "__main__":
         if RUN_ALL or False:
             res = interpolateCode.runInterpolation(["--codepath", repoPath, "--outputpath", testOutPath2, "--template", tFile, "--verbose"])
             if res is None:
-                # // we should also check that files arrive in the target directory
-                successes.append(f"{reason} PASSED. {testOutPath2}")
+                filePath = os.path.join(testOutPath2, templateFile)
+                if exists(filePath):
+                    successes.append(f"{reason} PASSED")
+                else:
+                    failures.append(f"{reason} FAILED. Template file not found in {filePath}")
             else :
                 failures.append(f"{reason} FAILED.  Got: {res}")
 
@@ -165,32 +218,110 @@ if __name__ == "__main__":
         if RUN_ALL or False:
             res = interpolateCode.runInterpolation(["--codepath", repoPath, "--gitpull", "--outputpath", testOutPath3, "--template", tFile, "--verbose"])
             if res is None:
-                # // we should also check that files arrive in the target directory
-                successes.append(f"{reason} PASSED. {testOutPath3}")
-
+                filePath = os.path.join(testOutPath3, templateFile)
+                if exists(filePath):
+                    successes.append(f"{reason} PASSED")
+                else:
+                    failures.append(f"{reason} FAILED. Template file not found in {filePath}")
             else :
                 failures.append(f"{reason} FAILED.  Got: {res}")
 
-        reason = "Git repo cloned to temp file and used for code sources"
+        reason = "Public Git repo cloned to temp file and used for code sources"
         if RUN_ALL or False:
-            res = interpolateCode.runInterpolation(["--gitrepo", gitURL, "--outputpath", testOutPath4, "--template", tFile, "--verbose"])
+            res = interpolateCode.runInterpolation(["--gitrepo", gitURLPublic, "--outputpath", testOutPath4, "--template", tFile, "--verbose"])
             if res is None:
-                # // we should also check that files arrive in the target directory
-                successes.append(f"{reason} PASSED. {testOutPath4}")
-
+                filePath = os.path.join(testOutPath4, templateFile)
+                if exists(filePath):
+                    successes.append(f"{reason} PASSED")
+                else:
+                    failures.append(f"{reason} FAILED. Template file not found in {filePath}")
             else :
                 failures.append(f"{reason} FAILED.  Got: {res}")
 
+
+        reason = "Private Git repo cloned to temp file and used for code sources"
+        if RUN_ALL or True:
+            res = interpolateCode.runInterpolation(["--gitrepo", gitURLPublic, "--outputpath", testOutPath11, "--template", tFile, "--verbose"])
+            if res is None:
+                filePath = os.path.join(testOutPath11, templateFile)
+                if exists(filePath):
+                    successes.append(f"{reason} PASSED")
+                else:
+                    failures.append(f"{reason} FAILED. Template file not found in {filePath}")
+            else :
+                failures.append(f"{reason} FAILED.  Got: {res}")
+
+
+
+        reason = "bad git url"
+        if RUN_ALL or False:
+            res = interpolateCode.runInterpolation(["--gitrepo", gitURLDoesNotExist, "--outputpath", testOutPath4, "--template", tFile, "--verbose"])
+            
+            err = "Error occured when cloning from git repo git@github.com:Tweega/DoesNotExist.git."
+            strLen = len(err)
+            if res is not None and res[0:strLen] == err:
+                successes.append(f"{reason} PASSED")
+            else :
+                failures.append(f"{reason} FAILED.  Got: {res}")
+            
+            
 
         reason = "stripped code files get copied into target folder"
         if RUN_ALL or False:
             res = interpolateCode.runInterpolation(["--codepath", repoPath, "--strip", "--outputpath", testOutPath5, "--template", templateFile, "--verbose"])
             if res is None:
-                # // we should also check that files arrive in the target directory
-                successes.append(f"{reason} PASSED")
+                filePath = os.path.join(testOutPath5, templateFile)
+                # check that the file contains no [exceprt] tags
+                lines, errMsg = getFileLines(filePath)
+                if errMsg is None:
+                    reExcerpt = r'excerpt'
+                    reCodeFile = r'THIS IS FROM CODE FILE'
+
+                    excerptFilter = lambda l: bool(re.search(reExcerpt, l))
+                    excerptLines = list(filter(excerptFilter, lines))
+
+                    if len(lines) < 10:
+                        failures.append(f"{reason} FAILED. template file contains too few lines: {filePath}")
+                    elif len(excerptLines) > 0:
+                        failures.append(f"{reason} FAILED. template file contains excerpt markup: {filePath}")
+                    else:
+                        # check that processed file contains inserted code
+                        
+                        codeFilter = lambda l: bool(re.search(reCodeFile, l))
+                        codeLines = list(filter(codeFilter, lines))
+                        if len(codeLines) != 3:
+                            failures.append(f"{reason} FAILED. processed template file missing lines {filePath}")
+
+                        # now check that stripped files have been copied over
+                        filePath = os.path.join(testOutPath5, "proto_code.html")
+                        lines, errMsg = getFileLines(filePath)
+                        if errMsg is None:
+                            excerptFilter = lambda l: bool(re.search(reExcerpt, l))
+                            excerptLines = list(filter(excerptFilter, lines))
+
+                            if len(lines) < 10:
+                                failures.append(f"{reason} FAILED. stripped code file contains too few lines: {filePath}")
+                            elif len(excerptLines) > 0:
+                                failures.append(f"{reason} FAILED. stripped code file contains excerpt markup: {filePath}")
+                            else:
+                                filePath = os.path.join(testOutPath5, "proto_code2.html")
+                                lines, errMsg = getFileLines(filePath)
+                                if errMsg is None:
+                                    excerptFilter = lambda l: bool(re.search(reExcerpt, l))
+                                    excerptLines = list(filter(excerptFilter, lines))
+
+                                    if len(lines) < 10:
+                                        failures.append(f"{reason} FAILED. stripped code file contains too few lines: {filePath}")
+                                    elif len(excerptLines) > 0:
+                                        failures.append(f"{reason} FAILED. stripped code file contains excerpt markup: {filePath}")
+                                    else:
+                                        successes.append(f"{reason} PASSED")
+                        else :
+                            failures.append(f"{reason} FAILED. Could not load lines from  {filePath}")
+                else :
+                    failures.append(f"{reason} FAILED. Could not load lines from  {filePath}")
             else :
-                failures.append(f"{reason} FAILED.  Got: {res}")
-                
+                failures.append(f"{reason} FAILED.  Got: {res}")    
 
 
     ############### short options form
@@ -198,18 +329,23 @@ if __name__ == "__main__":
         if RUN_ALL or False:
             res = interpolateCode.runInterpolation(["-c", nonGitRepoPath, "-o", notAGitRepoPath2, "-t", templateFile])
             if res is None:
-                # // we should also check that files arrive in the target directory
-                successes.append(f"{reason} PASSED")
+                filePath = os.path.join(notAGitRepoPath2, templateFile)
+                if exists(filePath):
+                    successes.append(f"{reason} PASSED")
+                else:
+                    failures.append(f"{reason} FAILED. Template file not found in {filePath}")
             else :
                 failures.append(f"{reason} FAILED.  Got: {res}")
-
 
         reason = "Test1 directory gets processed template file (and local repo is NOT refreshed from git)"
         if RUN_ALL or False:
             res = interpolateCode.runInterpolation(["-c", repoPath, "--o", testOutPath6, "-t", templateFile, "-q"])
             if res is None:
-                # // we should also check that files arrive in the target directory
-                successes.append(f"{reason} PASSED")
+                filePath = os.path.join(testOutPath6, templateFile)
+                if exists(filePath):
+                    successes.append(f"{reason} PASSED")
+                else:
+                    failures.append(f"{reason} FAILED. Template file not found in {filePath}")
             else :
                 failures.append(f"{reason} FAILED.  Got: {res}")
 
@@ -218,8 +354,11 @@ if __name__ == "__main__":
         if RUN_ALL or False:
             res = interpolateCode.runInterpolation(["-c", repoPath, "-o", testOutPath7, "-t", tFile, "-q"])
             if res is None:
-                # // we should also check that files arrive in the target directory
-                successes.append(f"{reason} PASSED.")
+                filePath = os.path.join(testOutPath7, templateFile)
+                if exists(filePath):
+                    successes.append(f"{reason} PASSED")
+                else:
+                    failures.append(f"{reason} FAILED. Template file not found in {filePath}")
             else :
                 failures.append(f"{reason} FAILED.  Got: {res}")
                 
@@ -229,32 +368,39 @@ if __name__ == "__main__":
         if RUN_ALL or False:
             res = interpolateCode.runInterpolation(["-c", repoPath, "-p", "-o", testOutPath8, "-t", tFile, "-q"])
             if res is None:
-                # // we should also check that files arrive in the target directory
-                successes.append(f"{reason} PASSED.")
-
+                filePath = os.path.join(testOutPath8, templateFile)
+                if exists(filePath):
+                    successes.append(f"{reason} PASSED")
+                else:
+                    failures.append(f"{reason} FAILED. Template file not found in {filePath}")
             else :
                 failures.append(f"{reason} FAILED.  Got: {res}")
 
 
         reason = "Git repo cloned to temp file and used for code sources"
         if RUN_ALL or False:
-            res = interpolateCode.runInterpolation(["-g", gitURL, "-o", testOutPath9, "-t", tFile, "-q"])
+            res = interpolateCode.runInterpolation(["-g", gitURLPublic, "-o", testOutPath9, "-t", tFile, "-q"])
             if res is None:
-                # // we should also check that files arrive in the target directory
-                successes.append(f"{reason} PASSED.")
-
+                filePath = os.path.join(testOutPath9, templateFile)
+                if exists(filePath):
+                    successes.append(f"{reason} PASSED")
+                else:
+                    failures.append(f"{reason} FAILED. Template file not found in {filePath}")
             else :
                 failures.append(f"{reason} FAILED.  Got: {res}")
+
 
         reason = "stripped code files get copied into target folder"
         if RUN_ALL or False:
             res = interpolateCode.runInterpolation(["-c", repoPath, "-s", "-o", testOutPath10, "-t", templateFile, "-q"])
             if res is None:
-                # // we should also check that files arrive in the target directory
-                successes.append(f"{reason} PASSED")
+                filePath = os.path.join(testOutPath10, templateFile)
+                if exists(filePath):
+                    successes.append(f"{reason} PASSED")
+                else:
+                    failures.append(f"{reason} FAILED. Template file not found in {filePath}")
             else :
                 failures.append(f"{reason} FAILED.  Got: {res}")
-
 
         reason = "dodgy options"
         if RUN_ALL or False:
@@ -266,7 +412,6 @@ if __name__ == "__main__":
             else :
                 failures.append(f"{reason} FAILED.  Got: {res}")
             
-
 
         reason = "dodgy options2"
         if RUN_ALL or False:
@@ -283,7 +428,7 @@ if __name__ == "__main__":
 
         #RESULTS
         testCount = len(successes) + len(failures)
-        if SHOW_ALL_RESULTS:
+        if not(ONLY_SHOW_FAILURES):
             print (f"\nTest successes: {len(successes)} out of {testCount} that were run\n")
             for r in successes:
                 print (r)
