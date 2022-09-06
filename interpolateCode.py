@@ -1,4 +1,3 @@
-from distutils import errors
 import getopt
 import sys
 import os
